@@ -1,0 +1,52 @@
+---
+driver:
+  name: vagrant
+  provider: virtualbox
+  provision: true
+
+provisioner:
+  #name: chef_zero_nodes
+  name: chef_zero
+  require_chef_omnibus: false
+  nodes_path: test/integration/nodes
+
+platforms:
+  - name: Ubuntu16.04
+    provisioner:
+      # Need to explicitly set chef_client_path because chef_omnibus would have prepended /opt/chef
+      chef_client_path: '/opt/chef/bin/chef-client'
+
+suites:
+  - name: k8s_1
+    driver:
+      gui: false
+      box: bento/ubuntu16.04
+      box_check_update: true
+      communicator: ssh
+      guest: ubuntu
+      ssh:
+        insert_key: false
+      vagrantfiles:
+        - ./vagrantfiles/ubuntu.rb
+      customize:
+        cpus: 1
+        memory: 1024
+        natdnshostresolver1: 'on'
+        natdnsproxy1: 'on'
+        usb: 'off'
+      network:
+        - ['forwarded_port', {guest: 22, host: 2200, id: 'ssh', auto_correct: true }]
+    data_bags_path: "test/smoke/data_bags"
+    run_list:
+      - recipe[chef_k8s_cookbook::default]
+    verifier:
+      inspec_tests:
+        - test/smoke/default
+    attributes:
+      chef_client:
+        config:
+          log_level: ":debug"
+verifier:
+  name: inspec
+  sudo: true
+...
